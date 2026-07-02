@@ -1,4 +1,4 @@
-import Image from "next/image";
+import BookCover from "@/components/BookCover";
 import Link from "next/link";
 import type { Book } from "@/lib/mockData";
 import HeartRating from "@/components/HeartRating";
@@ -31,12 +31,11 @@ export default function CurrentlyReading({ books }: CurrentlyReadingProps) {
             className="group flex flex-col overflow-hidden rounded-2xl bg-brand-card shadow-elegant transition-all duration-300 hover:-translate-y-1 hover:shadow-elegant-hover"
           >
             <div className="relative aspect-[2/3] overflow-hidden">
-              <Image
+              <BookCover
                 src={book.coverUrl}
                 alt={`${book.title} 封面`}
                 fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                sizes="(max-width: 768px) 50vw, 25vw"
+                className="transition-transform duration-300 group-hover:scale-105"
                 priority
               />
             </div>

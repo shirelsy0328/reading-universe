@@ -1,89 +1,204 @@
-import { promises as fs } from "fs";
-import path from "path";
-import { mockBooks, type Book, type BookStatus } from "@/lib/mockData";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  inputToRow,
+  partialInputToRow,
+  rowToBook,
+  type BookRow,
+} from "@/lib/supabase/books";
+import type { Book } from "@/lib/mockData";
+import type { BookInput } from "@/lib/books/types";
+import {
+  createBookInJson,
+  deleteBookFromJson,
+  getArchivedBooksFromJson,
+  getBookByIdFromJson,
+  getBooksFromJson,
+  getReadingBooksFromJson,
+  getWantToReadBooksFromJson,
+  isMissingBooksTableError,
+  updateBookInJson,
+} from "@/lib/books/jsonFallback";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "books.json");
+export type { BookInput } from "@/lib/books/types";
 
-async function ensureBooksFile(): Promise<Book[]> {
-  try {
-    const raw = await fs.readFile(DATA_FILE, "utf-8");
-    return JSON.parse(raw) as Book[];
-  } catch {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(DATA_FILE, JSON.stringify(mockBooks, null, 2), "utf-8");
-    return mockBooks;
-  }
+function mapRows(data: BookRow[] | null): Book[] {
+  return (data ?? []).map(rowToBook);
 }
 
-async function writeBooks(books: Book[]): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(books, null, 2), "utf-8");
+async function getNextSortOrder(): Promise<number> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("books")
+    .select("sort_order")
+    .order("sort_order", { ascending: true })
+    .limit(1);
+
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return 0;
+    }
+    throw error;
+  }
+
+  const minOrder = data?.[0]?.sort_order ?? 0;
+  return minOrder - 1;
 }
 
 export async function getBooks(): Promise<Book[]> {
-  return ensureBooksFile();
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("books")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return getBooksFromJson();
+    }
+    throw error;
+  }
+
+  return mapRows(data as BookRow[] | null);
 }
 
 export async function getBookById(id: string): Promise<Book | undefined> {
-  const books = await getBooks();
-  return books.find((book) => book.id === id);
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("books").select("*").eq("id", id).maybeSingle();
+
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return getBookByIdFromJson(id);
+    }
+    throw error;
+  }
+
+  return data ? rowToBook(data as BookRow) : undefined;
 }
 
 export async function getReadingBooks(limit?: number): Promise<Book[]> {
-  const books = (await getBooks()).filter((book) => book.status === "reading");
-  return limit ? books.slice(0, limit) : books;
+  const supabase = getSupabaseServerClient();
+  let query = supabase
+    .from("books")
+    .select("*")
+    .eq("status", "reading")
+    .order("sort_order", { ascending: true });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return getReadingBooksFromJson(limit);
+    }
+    throw error;
+  }
+
+  return mapRows(data as BookRow[] | null);
 }
 
 export async function getArchivedBooks(limit?: number): Promise<Book[]> {
-  const books = (await getBooks()).filter((book) => book.status === "archived");
-  return limit ? books.slice(0, limit) : books;
+  const supabase = getSupabaseServerClient();
+  let query = supabase
+    .from("books")
+    .select("*")
+    .eq("status", "archived")
+    .order("sort_order", { ascending: true });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return getArchivedBooksFromJson(limit);
+    }
+    throw error;
+  }
+
+  return mapRows(data as BookRow[] | null);
 }
 
 export async function getWantToReadBooks(limit?: number): Promise<Book[]> {
-  const books = (await getBooks()).filter((book) => book.status === "want-to-read");
-  return limit ? books.slice(0, limit) : books;
+  const supabase = getSupabaseServerClient();
+  let query = supabase
+    .from("books")
+    .select("*")
+    .eq("status", "want-to-read")
+    .order("sort_order", { ascending: true });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return getWantToReadBooksFromJson(limit);
+    }
+    throw error;
+  }
+
+  return mapRows(data as BookRow[] | null);
 }
 
-export type BookInput = {
-  title: string;
-  author: string;
-  coverUrl: string;
-  rating: number;
-  status: BookStatus;
-  progress?: string;
-  quote?: string;
-  thoughts?: string;
-};
-
 export async function createBook(input: BookInput): Promise<Book> {
-  const books = await getBooks();
-  const book: Book = {
-    id: `book-${Date.now()}`,
-    ...input,
-  };
-  books.unshift(book);
-  await writeBooks(books);
-  return book;
+  const supabase = getSupabaseServerClient();
+  const id = `book-${Date.now()}`;
+  const sortOrder = await getNextSortOrder();
+  const row = inputToRow(input, id, sortOrder);
+
+  const { data, error } = await supabase.from("books").insert(row).select("*").single();
+
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return createBookInJson(input);
+    }
+    throw error;
+  }
+
+  return rowToBook(data as BookRow);
 }
 
 export async function updateBook(id: string, input: Partial<BookInput>): Promise<Book> {
-  const books = await getBooks();
-  const index = books.findIndex((book) => book.id === id);
-  if (index === -1) {
+  const supabase = getSupabaseServerClient();
+  const row = partialInputToRow(input);
+
+  const { data, error } = await supabase
+    .from("books")
+    .update(row)
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return updateBookInJson(id, input);
+    }
+    throw error;
+  }
+
+  if (!data) {
     throw new Error("BOOK_NOT_FOUND");
   }
 
-  books[index] = { ...books[index], ...input };
-  await writeBooks(books);
-  return books[index];
+  return rowToBook(data as BookRow);
 }
 
 export async function deleteBook(id: string): Promise<void> {
-  const books = await getBooks();
-  const next = books.filter((book) => book.id !== id);
-  if (next.length === books.length) {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("books").delete().eq("id", id).select("id");
+
+  if (error) {
+    if (isMissingBooksTableError(error)) {
+      return deleteBookFromJson(id);
+    }
+    throw error;
+  }
+
+  if (!data?.length) {
     throw new Error("BOOK_NOT_FOUND");
   }
-  await writeBooks(next);
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import BookCover from "@/components/BookCover";
 import { getBooks } from "@/lib/books/store";
 import AdminLogoutButton from "@/components/admin/AdminLogoutButton";
 
@@ -39,12 +39,10 @@ export default async function AdminPage() {
             className="flex gap-4 rounded-2xl bg-brand-card p-4 shadow-elegant md:gap-6 md:p-5"
           >
             <div className="relative h-24 w-16 shrink-0 overflow-hidden rounded-lg md:h-28 md:w-20">
-              <Image
+              <BookCover
                 src={book.coverUrl}
                 alt={book.title}
                 fill
-                className="object-cover"
-                sizes="80px"
               />
             </div>
             <div className="flex min-w-0 flex-1 flex-col justify-center">

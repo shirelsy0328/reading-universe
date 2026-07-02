@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import type { Book } from "@/lib/mockData";
 import { readFavorites, writeFavorites, getUserComment } from "@/lib/bookStorage";
+import {
+  OPEN_REVIEW_DIALOG_EVENT,
+  REVIEW_SAVED_EVENT,
+  type OpenReviewDialogDetail,
+  type ReviewSavedDetail,
+} from "@/lib/reviewDialog";
+import ReviewDialog from "@/components/ReviewDialog";
 
 interface BookActionsProps {
   book: Book;
@@ -52,10 +58,38 @@ export default function BookActions({ book, compact = false }: BookActionsProps)
   const [isFavorite, setIsFavorite] = useState(false);
   const [shareTip, setShareTip] = useState<string | null>(null);
   const [hasComment, setHasComment] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+
+  const refreshCommentState = () => {
+    setHasComment(!!getUserComment(book.id));
+  };
 
   useEffect(() => {
     setIsFavorite(readFavorites().includes(book.id));
-    setHasComment(!!getUserComment(book.id));
+    refreshCommentState();
+  }, [book.id]);
+
+  useEffect(() => {
+    const handleOpen = (event: Event) => {
+      const detail = (event as CustomEvent<OpenReviewDialogDetail>).detail;
+      if (detail.bookId === book.id) {
+        setIsReviewOpen(true);
+      }
+    };
+
+    const handleSaved = (event: Event) => {
+      const detail = (event as CustomEvent<ReviewSavedDetail>).detail;
+      if (detail.bookId === book.id) {
+        refreshCommentState();
+      }
+    };
+
+    window.addEventListener(OPEN_REVIEW_DIALOG_EVENT, handleOpen);
+    window.addEventListener(REVIEW_SAVED_EVENT, handleSaved);
+    return () => {
+      window.removeEventListener(OPEN_REVIEW_DIALOG_EVENT, handleOpen);
+      window.removeEventListener(REVIEW_SAVED_EVENT, handleSaved);
+    };
   }, [book.id]);
 
   const toggleFavorite = () => {
@@ -97,35 +131,44 @@ export default function BookActions({ book, compact = false }: BookActionsProps)
   const labelClass = compact ? "text-[9px] md:text-[10px]" : "text-[10px] md:text-xs";
 
   return (
-    <div className="mt-3 md:mt-4">
-      <div className="flex items-center justify-around">
-        <Link href={`/books/${book.id}`} className={buttonClass} aria-label="查看书评">
-          <ReviewIcon className={iconClass} />
-          <span className={labelClass}>书评</span>
-        </Link>
+    <>
+      <div className="mt-3 md:mt-4">
+        <div className="flex items-center justify-around">
+          <button
+            type="button"
+            onClick={() => setIsReviewOpen(true)}
+            className={buttonClass}
+            aria-label="写书评"
+          >
+            <ReviewIcon className={iconClass} />
+            <span className={labelClass}>书评</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={toggleFavorite}
-          className={`${buttonClass} ${isFavorite ? "text-brand-accent" : ""}`}
-          aria-label={isFavorite ? "取消收藏" : "收藏"}
-          aria-pressed={isFavorite}
-        >
-          <HeartOutlineIcon className={iconClass} filled={isFavorite} />
-          <span className={labelClass}>{isFavorite ? "已收藏" : "收藏"}</span>
-        </button>
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            className={`${buttonClass} ${isFavorite ? "text-brand-accent" : ""}`}
+            aria-label={isFavorite ? "取消收藏" : "收藏"}
+            aria-pressed={isFavorite}
+          >
+            <HeartOutlineIcon className={iconClass} filled={isFavorite} />
+            <span className={labelClass}>{isFavorite ? "已收藏" : "收藏"}</span>
+          </button>
 
-        <button type="button" onClick={() => void handleShare()} className={buttonClass} aria-label="分享">
-          <ShareIcon className={iconClass} />
-          <span className={labelClass}>{shareTip ?? "分享"}</span>
-        </button>
+          <button type="button" onClick={() => void handleShare()} className={buttonClass} aria-label="分享">
+            <ShareIcon className={iconClass} />
+            <span className={labelClass}>{shareTip ?? "分享"}</span>
+          </button>
+        </div>
+
+        {compact && hasComment && (
+          <p className="mt-2 text-center text-[10px] text-brand-accent/70 md:text-xs">
+            已写书评
+          </p>
+        )}
       </div>
 
-      {compact && hasComment && (
-        <p className="mt-2 text-center text-[10px] text-brand-accent/70 md:text-xs">
-          已评论 · 点击查看
-        </p>
-      )}
-    </div>
+      <ReviewDialog book={book} isOpen={isReviewOpen} onClose={() => setIsReviewOpen(false)} />
+    </>
   );
 }

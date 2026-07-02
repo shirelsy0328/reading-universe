@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       writeUsers([...users, newUser]);
-      const sessionUser: AuthUser = { ...newUser, password: undefined };
+      const { password: _password, ...sessionUser } = newUser;
       saveSession(sessionUser);
       setLocalUser(sessionUser);
       return null;

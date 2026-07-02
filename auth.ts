@@ -1,7 +1,7 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 
-const providers = [];
+const providers: NonNullable<NextAuthConfig["providers"]> = [];
 
 if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
   providers.push(

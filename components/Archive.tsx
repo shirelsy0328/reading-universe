@@ -1,4 +1,4 @@
-import Image from "next/image";
+import BookCover from "@/components/BookCover";
 import Link from "next/link";
 import type { Book } from "@/lib/mockData";
 import HeartRating from "@/components/HeartRating";
@@ -32,12 +32,11 @@ export default function Archive({ books }: ArchiveProps) {
           >
             <div className="overflow-hidden rounded-2xl bg-brand-card shadow-elegant transition-shadow duration-300 group-hover:shadow-elegant-hover">
               <div className="relative aspect-[2/3] overflow-hidden">
-                <Image
+                <BookCover
                   src={book.coverUrl}
                   alt={`${book.title} 封面`}
                   fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  sizes="(max-width: 1024px) 50vw, 25vw"
+                  className="transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
 

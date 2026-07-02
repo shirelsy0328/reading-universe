@@ -1,4 +1,4 @@
-import Image from "next/image";
+import BookCover from "@/components/BookCover";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
@@ -48,12 +48,10 @@ export default async function BookPage({ params }: BookPageProps) {
         <article className="mt-8 overflow-hidden rounded-3xl bg-brand-card shadow-elegant md:mt-12">
           <div className="flex flex-col md:flex-row">
             <div className="relative aspect-[2/3] w-full shrink-0 md:w-64 lg:w-72">
-              <Image
+              <BookCover
                 src={book.coverUrl}
                 alt={`${book.title} 封面`}
                 fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 288px"
                 priority
               />
             </div>
