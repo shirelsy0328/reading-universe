@@ -4,11 +4,11 @@ import type { Book } from "@/lib/mockData";
 import HeartRating from "@/components/HeartRating";
 import BookActions from "@/components/BookActions";
 
-interface ArchiveProps {
+interface WantToReadProps {
   books: Book[];
 }
 
-export default function Archive({ books }: ArchiveProps) {
+export default function WantToRead({ books }: WantToReadProps) {
   if (books.length === 0) {
     return null;
   }
@@ -17,10 +17,10 @@ export default function Archive({ books }: ArchiveProps) {
     <section className="mx-auto max-w-7xl px-6 md:px-8 lg:px-12">
       <div className="mb-12 md:mb-16">
         <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-brand-accent">
-          The Archives
+          Want to Read
         </p>
         <h2 className="font-serif text-3xl font-medium text-brand-text md:text-4xl">
-          典藏书单
+          想读
         </h2>
       </div>
 
@@ -54,6 +54,11 @@ export default function Archive({ books }: ArchiveProps) {
                 <div className="mt-3">
                   <HeartRating rating={book.rating} size="sm" />
                 </div>
+                {book.quote && (
+                  <blockquote className="mt-3 line-clamp-2 font-serif text-xs italic leading-relaxed text-brand-text/65">
+                    「{book.quote}」
+                  </blockquote>
+                )}
                 <BookActions book={book} compact />
               </div>
             </div>

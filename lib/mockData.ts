@@ -215,3 +215,7 @@ export function getArchivedBooks(limit?: number): Book[] {
   const books = mockBooks.filter((book) => book.status === "archived");
   return limit ? books.slice(0, limit) : books;
 }
+
+export function getBookById(id: string): Book | undefined {
+  return mockBooks.find((book) => book.id === id);
+}

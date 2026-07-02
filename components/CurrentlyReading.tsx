@@ -1,5 +1,8 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Book } from "@/lib/mockData";
+import HeartRating from "@/components/HeartRating";
+import BookActions from "@/components/BookActions";
 
 interface CurrentlyReadingProps {
   books: Book[];
@@ -45,18 +48,27 @@ export default function CurrentlyReading({ books }: CurrentlyReadingProps) {
                 </span>
               )}
 
-              <h3 className="font-serif text-sm font-medium leading-snug text-brand-text md:text-base lg:text-lg">
+              <Link
+                href={`/books/${book.id}`}
+                className="font-serif text-sm font-medium leading-snug text-brand-text transition-colors hover:text-brand-accent md:text-base lg:text-lg"
+              >
                 {book.title}
-              </h3>
+              </Link>
               <p className="mt-1 text-[11px] tracking-wide text-brand-text/50 md:text-xs">
                 {book.author}
               </p>
+
+              <div className="mt-2 md:mt-3">
+                <HeartRating rating={book.rating} size="sm" />
+              </div>
 
               {book.quote && (
                 <blockquote className="mt-2 line-clamp-2 font-serif text-[10px] italic leading-relaxed text-brand-text/65 md:mt-3 md:text-xs">
                   「{book.quote}」
                 </blockquote>
               )}
+
+              <BookActions book={book} compact />
             </div>
           </article>
         ))}
